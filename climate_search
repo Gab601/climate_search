@@ -7,6 +7,10 @@ import sys
 import time
 from bs4 import BeautifulSoup
 
+
+HELP_TEXT = "Incorrect argument(s).\nUsage: ./climate_search LOCATION... \nList of currently available locations: world, us, aus, nz, can."
+
+
 def getCityLinks(url, city_localizer):
     try:
         response = requests.get(url, timeout=5)
@@ -108,6 +112,7 @@ def getCANCities(table):
         return links
     return None
 
+
 def getClimateTable(link):
     try:
         response = requests.get("https://en.wikipedia.org/wiki/" + link, timeout=5)
@@ -130,6 +135,7 @@ def getClimateTable(link):
         print(f"Found {len(weather_tables)} potential weather tables for the page on {link.replace('_', ' ')}. Proceeding with the first one.")
     return weather_tables[0]
 
+
 def getDataFromTr(tr, celcius):
     data = []
     tds = tr.findChildren("td", recursive=False)
@@ -145,6 +151,7 @@ def getDataFromTr(tr, celcius):
             except:
                 return None
     return data
+
 
 def getClimateData(table):
     celcius = True
@@ -185,6 +192,7 @@ def getClimateData(table):
 #               precip = getDataFromTr(tr, celcius)
 #    print(mean_max, avg_high, mean, avg_low, mean_min)
     return mean_max, avg_high, mean, avg_low, mean_min
+
 
 def calculateDesirabilityScore(mean_max, avg_high, mean, avg_low, mean_min):
     score = 0
@@ -236,9 +244,11 @@ def calculateDesirabilityScore(mean_max, avg_high, mean, avg_low, mean_min):
                 score += 1
     return (score * 5 / not_nones) / 65
 
+
 if __name__ == "__main__":
     locations = sys.argv[1:]
     links = []
+    help_printed = False
     for location in locations:
         if location == "us":
             links += getCityLinks("https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population", getUSCities)
@@ -250,7 +260,15 @@ if __name__ == "__main__":
             links += getCityLinks("https://en.wikipedia.org/wiki/List_of_cities_in_Australia_by_population", getAUSCities)
         elif location == "can":
             links += getCityLinks("https://en.wikipedia.org/wiki/List_of_the_100_largest_municipalities_in_Canada_by_population", getCANCities)
-
+        else:
+            print(HELP_TEXT)
+            help_printed = True
+    if help_printed and len(links) > 0:
+        print("Proceeding anyway with the valid location arguments")
+    if len(links) == 0:
+        if not help_printed:
+            print(HELP_TEXT)
+        raise SystemExit(0)
     scores = {}
     previous_print_length = 0
     for link in links:
